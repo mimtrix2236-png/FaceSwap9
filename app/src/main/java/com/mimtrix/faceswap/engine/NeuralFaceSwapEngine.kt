@@ -69,7 +69,19 @@ class NeuralFaceSwapEngine(private val context: Context) {
 
         val landmarkFile = ensureLandmarkModel()
         val detectorOptions = FaceLandmarker.FaceLandmarkerOptions.builder()
-            .setBaseOptions(BaseOptions.builder().setModelAssetBuffer(\n                ByteBuffer.allocateDirect(landmarkFile.length().toInt()).apply {\n                    landmarkFile.inputStream().use { input ->\n                        val bytes = input.readBytes()\n                        put(bytes)\n                    }\n                    rewind()\n                }\n            ).build())
+            .setBaseOptions(
+                BaseOptions.builder()
+                    .setModelAssetBuffer(
+                        ByteBuffer.allocateDirect(landmarkFile.length().toInt()).apply {
+                            landmarkFile.inputStream().use { input ->
+                                val bytes = input.readBytes()
+                                put(bytes)
+                            }
+                            rewind()
+                        }
+                    )
+                    .build()
+            )
             .setRunningMode(RunningMode.IMAGE)
             .setNumFaces(1)
             .build()
