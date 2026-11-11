@@ -1,6 +1,7 @@
 package com.mimtrix.faceswap.engine
 
 import android.content.Context
+import android.os.StatFs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -50,6 +51,14 @@ class NeuralModelStore(context: Context) {
 
     suspend fun prepareAll(onProgress: (String, Long, Long) -> Unit = { _, _, _ -> }): Map<String, File> =
         withContext(Dispatchers.IO) {
+            val missing = REQUIRED_MODELS.any { !File(modelDir, it.fileName).isFile }
+            if (missing) {
+                val freeBytes = StatFs(modelDir.absolutePath).availableBytes
+                val requiredBytes = 1024L * 1024L * 1024L
+                check(freeBytes >= requiredBytes) {
+                    "Se necesita al menos 1 GB libre para descargar los modelos neuronales. Libera espacio y vuelve a intentarlo."
+                }
+            }
             REQUIRED_MODELS.associate { model ->
                 model.fileName to ensureModel(model, onProgress)
             }
