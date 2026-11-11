@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PhotoPreview(uri: Uri?, label: String, onChange: () -> Unit) {
+private fun PhotoPreview(uri: Uri?, label: String, modifier: Modifier = Modifier, onChange: () -> Unit) {
     val context = LocalContext.current
     val preview by produceState<Bitmap?>(initialValue = null, uri) {
         value = if (uri == null) null else withContext(Dispatchers.IO) {
@@ -66,7 +66,7 @@ private fun PhotoPreview(uri: Uri?, label: String, onChange: () -> Unit) {
         }
     }
     Card(
-        modifier = Modifier.weight(1f),
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color(0xFF171F35)),
         shape = RoundedCornerShape(18.dp)
     ) {
@@ -145,11 +145,11 @@ private fun FaceSwapApp() {
                 if (tab.intValue == 0) {
                     Text("1. Tus fotografías", color = Color.White, fontSize = 18.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PhotoPreview(baseImage.value, "Foto de destino") {
+                        PhotoPreview(baseImage.value, "Foto de destino", Modifier.weight(1f)) {
                             choosingBase.value = true
                             imagePicker.launch("image/*")
                         }
-                        PhotoPreview(faceImage.value, "Rostro de origen") {
+                        PhotoPreview(faceImage.value, "Rostro de origen", Modifier.weight(1f)) {
                             choosingBase.value = false
                             imagePicker.launch("image/*")
                         }
