@@ -184,7 +184,11 @@ private fun FaceSwapApp() {
                                     } ?: error("No se pudo abrir la foto de destino.")
                                     try {
                                         status.value = "Analizando los dos rostros y preparando los modelos…"
-                                        val result = NeuralFaceSwapEngine(context).swap(sourceBitmap, targetBitmap) { message ->\n                                            scope.launch { withContext(Dispatchers.Main) { status.value = message } }
+                                        val result = NeuralFaceSwapEngine(context).swap(sourceBitmap, targetBitmap) { message ->
+                                            scope.launch {
+                                                withContext(Dispatchers.Main) { status.value = message }
+                                            }
+                                        }
                                         outputBitmap.value = result
                                     } finally {
                                         sourceBitmap.recycle()
