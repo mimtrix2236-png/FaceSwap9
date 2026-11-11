@@ -1,27 +1,33 @@
 # FaceSwap Android
 
-Aplicación Android para crear montajes de intercambio facial en fotografías y, en futuras versiones, vídeos.
+Aplicación Android de intercambio facial con procesamiento neuronal local.
 
-## Estado
-Base inicial del proyecto Android. La interfaz permite seleccionar imágenes y establece una arquitectura preparada para integrar un motor de procesamiento facial con consentimiento.
+## Motor de intercambio
 
-## Funciones previstas
-- Importar una foto base y una foto de referencia desde la galería.
-- Vista previa y exportación del resultado.
-- Flujo de consentimiento y uso responsable.
-- Procesamiento local como objetivo prioritario.
-- Soporte de vídeo en una etapa posterior.
+La aplicación integra un pipeline GHOST en el dispositivo:
+- MediaPipe Face Landmarker detecta y alinea los rostros.
+- ArcFace W600K R50 extrae la identidad del rostro de referencia.
+- CrossFace adapta la identidad al espacio latente de GHOST.
+- GHOST 1 256 genera el rostro para la fotografía de destino.
+- OpenCV compone el resultado sobre la fotografía original.
+- ONNX Runtime ejecuta la inferencia localmente.
 
-## Requisitos
+Las fotografías no se envían a un servidor. En el primer uso, la aplicación descarga los modelos a su almacenamiento privado. Se necesita conexión a Internet durante esa descarga y aproximadamente 1 GB de espacio libre. Los modelos quedan almacenados para los usos siguientes. La pantalla informa la etapa y el porcentaje de descarga para evitar una espera sin explicación.
+
+## Compilar
+
 - Android Studio reciente
 - JDK 17
 - Android SDK 35
 
-## Compilar
-Abrir el repositorio en Android Studio y ejecutar la configuración Gradle. También se puede compilar con:
 ```bash
 ./gradlew assembleDebug
 ```
 
-## Privacidad y uso responsable
-Usa únicamente imágenes de personas que hayan dado su consentimiento. La aplicación no está diseñada para crear contenido íntimo no consentido, suplantar identidades ni engañar sobre la autenticidad de un material.
+## Licencias de los modelos
+
+Los pesos neuronales tienen términos propios, distintos de la licencia del código. Consulta [MODEL_LICENSES.md](MODEL_LICENSES.md) antes de redistribuir o usar comercialmente la aplicación. En particular, algunos pesos están sujetos a condiciones no comerciales.
+
+## Uso responsable
+
+Utiliza únicamente fotografías de personas que hayan dado su consentimiento. No crees contenido íntimo sin consentimiento ni material destinado a suplantar o engañar.
