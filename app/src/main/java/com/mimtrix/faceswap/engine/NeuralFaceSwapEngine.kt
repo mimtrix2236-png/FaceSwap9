@@ -50,12 +50,19 @@ class NeuralFaceSwapEngine(private val context: Context) {
             397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
             172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
         )
-        private val ARC_TEMPLATE_112 = arrayOf(
+        private val GHOST_TEMPLATE_112 = arrayOf(
             doubleArrayOf(39.729999, 51.137999),
             doubleArrayOf(72.269999, 51.137999),
             doubleArrayOf(56.0, 68.493000),
             doubleArrayOf(42.462999, 87.010000),
             doubleArrayOf(69.537001, 87.010000)
+        )
+        private val ARCFACE_TEMPLATE_112 = arrayOf(
+            doubleArrayOf(38.2946, 51.6963),
+            doubleArrayOf(73.5318, 51.5014),
+            doubleArrayOf(56.0252, 71.7366),
+            doubleArrayOf(41.5493, 92.3655),
+            doubleArrayOf(70.7299, 92.2041)
         )
     }
 
@@ -85,8 +92,8 @@ class NeuralFaceSwapEngine(private val context: Context) {
             val srcPoints = points(sourceFace, source.width, source.height, 112)
             val dstPoints112 = points(targetFace, target.width, target.height, 112)
             val dstPoints256 = points(targetFace, target.width, target.height, FACE_SIZE)
-            val srcTransform = affine(srcPoints, template(112))
-            val dstTransform = affine(dstPoints256, template(FACE_SIZE))
+            val srcTransform = affine(srcPoints, template(112, ARCFACE_TEMPLATE_112))
+            val dstTransform = affine(dstPoints256, template(FACE_SIZE, GHOST_TEMPLATE_112))
 
             try {
                 Utils.bitmapToMat(source, srcRgba)
@@ -172,8 +179,8 @@ class NeuralFaceSwapEngine(private val context: Context) {
                   face[index].y().toDouble() * height * size / height)
         }.toTypedArray())
 
-    private fun template(size: Int): MatOfPoint2f =
-        MatOfPoint2f(*ARC_TEMPLATE_112.map { Point(it[0] * size / 112.0, it[1] * size / 112.0) }.toTypedArray())
+    private fun template(size: Int, landmarks: Array<DoubleArray>): MatOfPoint2f =
+        MatOfPoint2f(*landmarks.map { Point(it[0] * size / 112.0, it[1] * size / 112.0) }.toTypedArray())
 
     private fun affine(from: MatOfPoint2f, to: MatOfPoint2f): Mat {
         val matrix = Calib3d.estimateAffinePartial2D(from, to)
