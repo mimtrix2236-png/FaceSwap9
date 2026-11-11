@@ -33,7 +33,11 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("com.google.mlkit:face-detection:16.1.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+
+    // Open-source on-device computer-vision engine (Apache-2.0)
+    implementation("com.google.mediapipe:tasks-vision:0.10.21")
+    implementation("org.opencv:opencv:4.10.0")
+    // ONNX Runtime CPU backend for private, on-device neural inference.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
