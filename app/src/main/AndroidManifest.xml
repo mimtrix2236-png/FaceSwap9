@@ -4,6 +4,8 @@
     <application
         android:allowBackup="false"
         android:label="FaceSwap Android"
+        android:icon="@drawable/faceswap_logo"
+        android:roundIcon="@drawable/faceswap_logo"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
