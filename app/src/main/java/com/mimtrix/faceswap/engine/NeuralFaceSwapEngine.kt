@@ -99,41 +99,47 @@ class NeuralFaceSwapEngine(private val context: Context) {
                     Imgproc.INTER_LINEAR, Core.BORDER_REFLECT)
 
                 val models = NeuralModelStore(context).prepareAll()
-                NeuralModelRuntime.open(models).use { runtime ->
-                    val env = OrtEnvironment.getEnvironment()
-                    val identity = runVector(runtime.faceRecognizer, env, "input",
+                val env = OrtEnvironment.getEnvironment()
+                val arcFaceFile = models.getValue("arcface_w600k_r50.onnx")
+                val converterFile = models.getValue("crossface_ghost.onnx")
+                val ghostFile = models.getValue("ghost_1_256.onnx")
+
+                val identity = withSession(arcFaceFile) { session ->
+                    runVector(session, env, "input",
                         imageTensor(source112, 112, normalizeArcFace = true), longArrayOf(1, 3, 112, 112))
-                    val identityNorm = l2Normalize(identity)
-                    val converted = runVector(runtime.embeddingConverter, env, "input",
-                        identityNorm, longArrayOf(1, 512))
-                    val ghostInput = imageTensor(target256, FACE_SIZE, normalizeArcFace = false)
-                    val generated = runVector(runtime.swapper, env, mapOf(
+                }
+                val converted = withSession(converterFile) { session ->
+                    runVector(session, env, "input", identity, longArrayOf(1, 512))
+                }
+                val ghostInput = imageTensor(target256, FACE_SIZE, normalizeArcFace = false)
+                val generated = withSession(ghostFile) { session ->
+                    runVector(session, env, mapOf(
                         "source" to tensor(env, converted, longArrayOf(1, converted.size.toLong())),
                         "target" to tensor(env, ghostInput, longArrayOf(1, 3, FACE_SIZE.toLong(), FACE_SIZE.toLong()))
                     ))
-                    val generatedMat = outputToBgr(generated, FACE_SIZE)
-                    val mask = createFaceMask(targetFace, dstTransform, target.width, target.height)
-                    val resultMat = Mat()
+                }
+                val generatedMat = outputToBgr(generated, FACE_SIZE)
+                val mask = createFaceMask(targetFace, dstTransform, target.width, target.height)
+                val resultMat = Mat()
+                try {
+                    val center = Point(
+                        targetFace[1].x().toDouble() * target.width,
+                        targetFace[1].y().toDouble() * target.height
+                    )
+                    Photo.seamlessClone(generatedMat, dstBgr, mask, center, resultMat, Photo.NORMAL_CLONE)
+                    val rgba = Mat()
                     try {
-                        val center = Point(
-                            targetFace[1].x().toDouble() * target.width,
-                            targetFace[1].y().toDouble() * target.height
-                        )
-                        Photo.seamlessClone(generatedMat, dstBgr, mask, center, resultMat, Photo.NORMAL_CLONE)
-                        val rgba = Mat()
-                        try {
-                            Imgproc.cvtColor(resultMat, rgba, Imgproc.COLOR_BGR2RGBA)
-                            val bitmap = Bitmap.createBitmap(target.width, target.height, Bitmap.Config.ARGB_8888)
-                            Utils.matToBitmap(rgba, bitmap)
-                            bitmap
-                        } finally {
-                            rgba.release()
-                        }
+                        Imgproc.cvtColor(resultMat, rgba, Imgproc.COLOR_BGR2RGBA)
+                        val bitmap = Bitmap.createBitmap(target.width, target.height, Bitmap.Config.ARGB_8888)
+                        Utils.matToBitmap(rgba, bitmap)
+                        bitmap
                     } finally {
-                        generatedMat.release()
-                        mask.release()
-                        resultMat.release()
+                        rgba.release()
                     }
+                } finally {
+                    generatedMat.release()
+                    mask.release()
+                    resultMat.release()
                 }
             } finally {
                 srcRgba.release(); dstRgba.release(); srcBgr.release(); dstBgr.release()
@@ -144,6 +150,18 @@ class NeuralFaceSwapEngine(private val context: Context) {
         } finally {
             landmarker.close()
         }
+    }
+
+    private fun <T> withSession(file: File, block: (ai.onnxruntime.OrtSession) -> T): T {
+        val options = ai.onnxruntime.OrtSession.SessionOptions()
+        options.setIntraOpNumThreads(2)
+        options.setInterOpNumThreads(1)
+        val session = try {
+            OrtEnvironment.getEnvironment().createSession(file.absolutePath, options)
+        } finally {
+            options.close()
+        }
+        return session.use(block)
     }
 
     private fun points(face: List<com.google.mediapipe.tasks.components.containers.NormalizedLandmark>,
