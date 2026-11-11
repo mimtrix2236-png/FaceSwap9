@@ -179,8 +179,8 @@ class NeuralFaceSwapEngine(private val context: Context) {
     private fun points(face: List<com.google.mediapipe.tasks.components.containers.NormalizedLandmark>,
                        width: Int, height: Int, size: Int): MatOfPoint2f =
         MatOfPoint2f(*ANCHORS.map { index ->
-            Point(face[index].x().toDouble() * width * size / width,
-                  face[index].y().toDouble() * height * size / height)
+            Point(face[index].x().toDouble() * width,
+                  face[index].y().toDouble() * height)
         }.toTypedArray())
 
     private fun template(size: Int, landmarks: Array<DoubleArray>): MatOfPoint2f =
