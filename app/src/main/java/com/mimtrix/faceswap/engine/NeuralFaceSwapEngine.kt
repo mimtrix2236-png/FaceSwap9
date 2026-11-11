@@ -65,7 +65,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
 
         val landmarkFile = ensureLandmarkModel()
         val detectorOptions = FaceLandmarker.FaceLandmarkerOptions.builder()
-            .setBaseOptions(BaseOptions.builder().setModelAssetPath(landmarkFile.absolutePath).build())
+            .setBaseOptions(BaseOptions.builder().setModelAssetBuffer(ByteBuffer.wrap(landmarkFile.readBytes())).build())
             .setRunningMode(RunningMode.IMAGE)
             .setNumFaces(1)
             .build()
@@ -108,6 +108,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
                     runVector(session, env, "input",
                         imageTensor(source112, 112, normalizeArcFace = true), longArrayOf(1, 3, 112, 112))
                 }
+                check(identity.size == 512) { "ArcFace no devolvió el vector de identidad de 512 valores esperado." }
                 val converted = withSession(converterFile) { session ->
                     runVector(session, env, "input", identity, longArrayOf(1, 512))
                 }
