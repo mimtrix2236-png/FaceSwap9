@@ -1,12 +1,14 @@
 package com.mimtrix.faceswap
 
 import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,12 +31,36 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.mimtrix.faceswap.engine.NeuralFaceSwapEngine
+
+
+private fun android.content.Context.decodeScaledBitmap(uri: Uri, maxDimension: Int): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= maxDimension ||
+        bounds.outHeight / (sample * 2) >= maxDimension) {
+        sample *= 2
+    }
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+    }
+    return contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,7 +73,11 @@ class MainActivity : ComponentActivity() {
 private fun FaceSwapApp() {
     val baseImage = remember { mutableStateOf<Uri?>(null) }
     val faceImage = remember { mutableStateOf<Uri?>(null) }
-    val picker = remember { mutableStateOf(false) }
+    val outputBitmap = remember { mutableStateOf<Bitmap?>(null) }
+    val status = remember { mutableStateOf("Selecciona las dos fotos para comenzar.") }
+    val processing = remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val choosingBase = remember { mutableStateOf(true) }
 
     val imagePicker = rememberLauncherForActivityResult(
@@ -68,7 +97,11 @@ private fun FaceSwapApp() {
             ) {
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.Image(\n                        painter = painterResource(id = R.drawable.faceswap_logo),\n                        contentDescription = "FaceSwap logo rojo neón",\n                        modifier = Modifier.height(48.dp)\n                    )
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(id = R.drawable.faceswap_logo),
+                        contentDescription = "FaceSwap logo rojo neón",
+                        modifier = Modifier.height(48.dp)
+                    )
                     Column(Modifier.padding(start = 12.dp)) {
                         Text("FaceSwap", color = Color.White, fontSize = 28.sp)
                         Text("ANDROID STUDIO • BETA", color = Color(0xFF9AA4BF), fontSize = 11.sp)
@@ -112,18 +145,47 @@ private fun FaceSwapApp() {
                     }
                 }
                 Button(
-                    onClick = { },
-                    enabled = baseImage.value != null && faceImage.value != null,
+                    onClick = {
+                        scope.launch {
+                            processing.value = true
+                            status.value = "Descargando modelos neuronales y analizando rostros…"
+                            try {
+                                val sourceUri = faceImage.value ?: error("Selecciona la foto del rostro.")
+                                val targetUri = baseImage.value ?: error("Selecciona la foto de destino.")
+                                val sourceBitmap = withContext(Dispatchers.IO) {
+                                    context.decodeScaledBitmap(sourceUri, 1600)
+                                } ?: error("No se pudo abrir la foto de referencia.")
+                                val targetBitmap = withContext(Dispatchers.IO) {
+                                    context.decodeScaledBitmap(targetUri, 2048)
+                                } ?: error("No se pudo abrir la foto de destino.")
+                                try {
+                                    outputBitmap.value = NeuralFaceSwapEngine(context).swap(sourceBitmap, targetBitmap)
+                                } finally {
+                                    sourceBitmap.recycle()
+                                    targetBitmap.recycle()
+                                }
+                                status.value = "Intercambio neuronal GHOST completado en el dispositivo."
+                            } catch (error: Exception) {
+                                status.value = error.message ?: "No se pudo procesar las imágenes."
+                            } finally {
+                                processing.value = false
+                            }
+                        }
+                    },
+                    enabled = baseImage.value != null && faceImage.value != null && !processing.value,
                     modifier = Modifier.fillMaxWidth().height(54.dp)
                 ) {
                     androidx.compose.material3.Icon(Icons.Rounded.AutoAwesome, contentDescription = null)
-                    Text("  Preparar intercambio")
+                    Text(if (processing.value) "  Procesando…" else "  Intercambiar rostros")
                 }
-                Text(
-                    "Versión inicial: selección de imágenes lista. El motor de intercambio y la exportación se integrarán en la siguiente etapa.",
-                    color = Color(0xFF8994AE),
-                    fontSize = 12.sp
-                )
+                Text(status.value, color = Color(0xFFB8C2D9), fontSize = 12.sp)
+                outputBitmap.value?.let { result ->
+                    Image(
+                        bitmap = result.asImageBitmap(),
+                        contentDescription = "Resultado del intercambio facial",
+                        modifier = Modifier.fillMaxWidth().height(260.dp)
+                    )
+                }
             }
         }
     }
