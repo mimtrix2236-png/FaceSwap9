@@ -9,7 +9,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,6 +44,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.mimtrix.faceswap.engine.NeuralFaceSwapEngine
+
+
+private fun android.content.Context.decodeScaledBitmap(uri: Uri, maxDimension: Int): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= maxDimension ||
+        bounds.outHeight / (sample * 2) >= maxDimension) {
+        sample *= 2
+    }
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+    }
+    return contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -138,10 +153,10 @@ private fun FaceSwapApp() {
                                 val sourceUri = faceImage.value ?: error("Selecciona la foto del rostro.")
                                 val targetUri = baseImage.value ?: error("Selecciona la foto de destino.")
                                 val sourceBitmap = withContext(Dispatchers.IO) {
-                                    context.contentResolver.openInputStream(sourceUri)?.use { BitmapFactory.decodeStream(it) }
+                                    context.decodeScaledBitmap(sourceUri, 1600)
                                 } ?: error("No se pudo abrir la foto de referencia.")
                                 val targetBitmap = withContext(Dispatchers.IO) {
-                                    context.contentResolver.openInputStream(targetUri)?.use { BitmapFactory.decodeStream(it) }
+                                    context.decodeScaledBitmap(targetUri, 2048)
                                 } ?: error("No se pudo abrir la foto de destino.")
                                 outputBitmap.value = NeuralFaceSwapEngine(context).swap(sourceBitmap, targetBitmap)
                                 status.value = "Intercambio neuronal GHOST completado en el dispositivo."
