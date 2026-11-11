@@ -9,6 +9,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.util.zip.CRC32
 
 /**
  * Downloads the neural model bundle into private app storage.
@@ -72,7 +73,7 @@ class NeuralModelStore(context: Context) {
         val expected = readText(model.checksumUrl).trim().lowercase()
             .substringBefore(' ').substringBefore('\n')
             .filter { it in "0123456789abcdef" }
-        require(expected.length == 32 || expected.length == 64) {
+        require(expected.length == 8 || expected.length == 32 || expected.length == 64) {
             "No se pudo validar la firma del modelo ${model.fileName}."
         }
 
@@ -137,16 +138,25 @@ class NeuralModelStore(context: Context) {
     }
 
     private fun digest(file: File, expectedLength: Int): String {
-        val algorithm = if (expectedLength == 32) "MD5" else "SHA-256"
-        val digest = MessageDigest.getInstance(algorithm)
         file.inputStream().buffered().use { input ->
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            if (expectedLength == 8) {
+                val crc = CRC32()
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    crc.update(buffer, 0, count)
+                }
+                return crc.value.toString(16).padStart(8, '0')
+            }
+            val algorithm = if (expectedLength == 32) "MD5" else "SHA-256"
+            val digest = MessageDigest.getInstance(algorithm)
             while (true) {
                 val count = input.read(buffer)
                 if (count < 0) break
                 digest.update(buffer, 0, count)
             }
+            return digest.digest().joinToString("") { "%02x".format(it) }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 }
