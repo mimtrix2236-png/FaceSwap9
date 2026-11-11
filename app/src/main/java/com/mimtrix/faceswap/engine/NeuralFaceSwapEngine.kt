@@ -169,7 +169,11 @@ class NeuralFaceSwapEngine(private val context: Context) {
         } finally {
             options.close()
         }
-        return session.use(block)
+        return try {
+            block(session)
+        } finally {
+            session.close()
+        }
     }
 
     private fun points(face: List<com.google.mediapipe.tasks.components.containers.NormalizedLandmark>,
@@ -230,12 +234,15 @@ class NeuralFaceSwapEngine(private val context: Context) {
                           inputs: Map<String, OnnxTensor>): FloatArray {
         inputs.values.forEach { /* tensors are closed below */ }
         try {
-            session.run(inputs).use { result ->
+            val result = session.run(inputs)
+            try {
                 val output = result.get(0).value as OnnxTensor
-                val buffer = output.floatBuffer
+                val buffer = output.getFloatBuffer()
                 val values = FloatArray(buffer.remaining())
                 buffer.get(values)
                 return values
+            } finally {
+                result.close()
             }
         } finally {
             inputs.values.forEach { it.close() }
