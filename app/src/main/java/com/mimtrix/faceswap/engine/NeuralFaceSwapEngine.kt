@@ -86,8 +86,8 @@ class NeuralFaceSwapEngine(private val context: Context) {
             val dstBgr = Mat()
             val source112 = Mat()
             val target256 = Mat()
-            val srcPoints = points(sourceFace, source.width, source.height, 112)
-                        val dstPoints256 = points(targetFace, target.width, target.height, FACE_SIZE)
+            val srcPoints = points(sourceFace, source.width, source.height)
+                        val dstPoints256 = points(targetFace, target.width, target.height)
             val srcTransform = affine(srcPoints, template(112, ARCFACE_TEMPLATE_112))
             val dstTransform = affine(dstPoints256, template(FACE_SIZE, GHOST_TEMPLATE_112))
 
@@ -111,7 +111,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
                     val inputName = session.inputNames.firstOrNull()
                         ?: error("El modelo ArcFace no declara una entrada.")
                     runVector(session, env, inputName,
-                        imageTensor(source112, 112, normalizeArcFace = true), longArrayOf(1, 3, 112, 112))
+                        imageTensor(source112, 112), longArrayOf(1, 3, 112, 112))
                 }
                 check(identity.size == 512) { "ArcFace no devolvió el vector de identidad de 512 valores esperado." }
                 val converted = withSession(converterFile) { session ->
@@ -181,7 +181,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
     }
 
     private fun points(face: List<com.google.mediapipe.tasks.components.containers.NormalizedLandmark>,
-                       width: Int, height: Int, size: Int): MatOfPoint2f =
+                       width: Int, height: Int): MatOfPoint2f =
         MatOfPoint2f(*ANCHORS.map { index ->
             Point(face[index].x().toDouble() * width,
                   face[index].y().toDouble() * height)
@@ -196,7 +196,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
         return matrix
     }
 
-    private fun imageTensor(imageBgr: Mat, size: Int, normalizeArcFace: Boolean): FloatArray {
+    private fun imageTensor(imageBgr: Mat, size: Int): FloatArray {
         val rgb = Mat()
         val resized = Mat()
         try {
