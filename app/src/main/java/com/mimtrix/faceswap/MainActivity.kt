@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.mimtrix.faceswap.engine.FaceSwapEngine
+import com.mimtrix.faceswap.engine.NeuralFaceSwapEngine
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -133,7 +133,7 @@ private fun FaceSwapApp() {
                     onClick = {
                         scope.launch {
                             processing.value = true
-                            status.value = "Analizando rostros en el dispositivo…"
+                            status.value = "Descargando modelos neuronales y analizando rostros…"
                             try {
                                 val sourceUri = faceImage.value ?: error("Selecciona la foto del rostro.")
                                 val targetUri = baseImage.value ?: error("Selecciona la foto de destino.")
@@ -143,8 +143,8 @@ private fun FaceSwapApp() {
                                 val targetBitmap = withContext(Dispatchers.IO) {
                                     context.contentResolver.openInputStream(targetUri)?.use { BitmapFactory.decodeStream(it) }
                                 } ?: error("No se pudo abrir la foto de destino.")
-                                outputBitmap.value = FaceSwapEngine(context).swap(sourceBitmap, targetBitmap)
-                                status.value = "Intercambio preparado. El resultado se procesa localmente."
+                                outputBitmap.value = NeuralFaceSwapEngine(context).swap(sourceBitmap, targetBitmap)
+                                status.value = "Intercambio neuronal GHOST completado en el dispositivo."
                             } catch (error: Exception) {
                                 status.value = error.message ?: "No se pudo procesar las imágenes."
                             } finally {
