@@ -158,7 +158,12 @@ private fun FaceSwapApp() {
                                 val targetBitmap = withContext(Dispatchers.IO) {
                                     context.decodeScaledBitmap(targetUri, 2048)
                                 } ?: error("No se pudo abrir la foto de destino.")
-                                outputBitmap.value = NeuralFaceSwapEngine(context).swap(sourceBitmap, targetBitmap)
+                                try {
+                                    outputBitmap.value = NeuralFaceSwapEngine(context).swap(sourceBitmap, targetBitmap)
+                                } finally {
+                                    sourceBitmap.recycle()
+                                    targetBitmap.recycle()
+                                }
                                 status.value = "Intercambio neuronal GHOST completado en el dispositivo."
                             } catch (error: Exception) {
                                 status.value = error.message ?: "No se pudo procesar las imágenes."
