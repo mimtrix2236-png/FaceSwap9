@@ -2,7 +2,6 @@ package com.mimtrix.faceswap.engine
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -29,8 +28,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.FloatBuffer
-import kotlin.math.sqrt
 
 /**
  * On-device GHOST 1 neural face replacement.
@@ -90,8 +87,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
             val source112 = Mat()
             val target256 = Mat()
             val srcPoints = points(sourceFace, source.width, source.height, 112)
-            val dstPoints112 = points(targetFace, target.width, target.height, 112)
-            val dstPoints256 = points(targetFace, target.width, target.height, FACE_SIZE)
+                        val dstPoints256 = points(targetFace, target.width, target.height, FACE_SIZE)
             val srcTransform = affine(srcPoints, template(112, ARCFACE_TEMPLATE_112))
             val dstTransform = affine(dstPoints256, template(FACE_SIZE, GHOST_TEMPLATE_112))
 
@@ -112,15 +108,23 @@ class NeuralFaceSwapEngine(private val context: Context) {
                 val ghostFile = models.getValue("ghost_1_256.onnx")
 
                 val identity = withSession(arcFaceFile) { session ->
-                    runVector(session, env, "input",
+                    val inputName = session.inputNames.firstOrNull()
+                        ?: error("El modelo ArcFace no declara una entrada.")
+                    runVector(session, env, inputName,
                         imageTensor(source112, 112, normalizeArcFace = true), longArrayOf(1, 3, 112, 112))
                 }
                 check(identity.size == 512) { "ArcFace no devolvió el vector de identidad de 512 valores esperado." }
                 val converted = withSession(converterFile) { session ->
-                    runVector(session, env, "input", identity, longArrayOf(1, 512))
+                    val inputName = session.inputNames.firstOrNull()
+                        ?: error("CrossFace no declara una entrada.")
+                    runVector(session, env, inputName, identity, longArrayOf(1, 512))
                 }
                 val ghostInput = imageTensor(target256, FACE_SIZE, normalizeArcFace = false)
                 val generated = withSession(ghostFile) { session ->
+                    val requiredInputs = setOf("source", "target")
+                    check(session.inputNames.containsAll(requiredInputs)) {
+                        "El modelo GHOST no contiene las entradas source y target esperadas."
+                    }
                     runVector(session, env, mapOf(
                         "source" to tensor(env, converted, longArrayOf(1, converted.size.toLong())),
                         "target" to tensor(env, ghostInput, longArrayOf(1, 3, FACE_SIZE.toLong(), FACE_SIZE.toLong()))
@@ -152,7 +156,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
             } finally {
                 srcRgba.release(); dstRgba.release(); srcBgr.release(); dstBgr.release()
                 source112.release(); target256.release()
-                srcPoints.release(); dstPoints112.release(); dstPoints256.release()
+                srcPoints.release(); dstPoints256.release()
                 srcTransform.release(); dstTransform.release()
             }
         } finally {
@@ -210,8 +214,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
                 val pixel = (y * size + x) * 3
                 for (channel in 0..2) {
                     val value = (pixels[pixel + channel].toInt() and 0xff) / 255f
-                    tensor[channel * plane + y * size + x] =
-                        if (normalizeArcFace) value * 2f - 1f else value * 2f - 1f
+                    tensor[channel * plane + y * size + x] = value * 2f - 1f
                 }
             }
             return tensor
@@ -247,12 +250,6 @@ class NeuralFaceSwapEngine(private val context: Context) {
         } finally {
             inputs.values.forEach { it.close() }
         }
-    }
-
-    private fun l2Normalize(values: FloatArray): FloatArray {
-        val norm = sqrt(values.sumOf { it.toDouble() * it.toDouble() }).toFloat()
-        require(norm > 0f) { "ArcFace produjo una identidad vacía." }
-        return FloatArray(values.size) { values[it] / norm }
     }
 
     private fun outputToBgr(output: FloatArray, size: Int): Mat {
