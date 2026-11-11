@@ -1,24 +1,23 @@
 # FaceSwap Android
 
-Aplicación Android para crear montajes de intercambio facial en fotografías con procesamiento local.
+Aplicación Android para crear montajes de intercambio facial con procesamiento local.
 
-## Motor local integrado
+## Motor local
 
-La rama `feature/open-source-face-engine` incorpora:
-- **MediaPipe Tasks Vision 0.10.21** para detectar puntos faciales (landmarks) en el dispositivo.
-- **OpenCV Android 4.10.0** para alineación geométrica y mezcla Poisson/seamless clone.
-- Descarga inicial y caché local del modelo Face Landmarker oficial; las fotos se procesan en el teléfono y no se envían a un servidor.
-- Interfaz Android conectada al flujo de procesamiento y vista previa.
+La rama `feature/open-source-face-engine` incluye:
+- **MediaPipe Tasks Vision 0.10.21** para landmarks faciales.
+- **OpenCV Android 4.10.0** para alineación geométrica y composición.
+- **ONNX Runtime Android 1.20.0** como backend de inferencia neuronal en CPU.
+- `NeuralModelStore`: descarga reanudable por archivo (temporal + validación SHA-256/MD5) a almacenamiento privado de la app.
+- `NeuralModelRuntime`: apertura y cierre controlado de sesiones ONNX.
 
-Este primer motor usa alineación geométrica clásica y mezcla de imagen; no es todavía un modelo generativo neuronal de identidad. La calidad depende de que ambas fotos tengan rostros frontales, bien iluminados y con escala/pose parecidas. El primer uso necesita conexión para descargar el modelo; después queda en caché.
+## Estado del motor neuronal
 
-## Licencias
+Se ha preparado el bundle experimental **GHOST 1 256 + CrossFace Ghost + ArcFace W600K R50**. GHOST está catalogado como Apache-2.0; CrossFace Ghost y ArcFace tienen términos propios (OpenRAIL-M y Non-Commercial, respectivamente). Los pesos no se empaquetan en el APK: se descargan desde sus fuentes upstream.
 
-- OpenCV Android: Apache-2.0.
-- MediaPipe Tasks: Apache-2.0.
-- Los modelos de intercambio facial de InsightFace/InSwapper y algunos modelos de FaceFusion tienen restricciones no comerciales o requieren licencia adicional; por eso **no se incluyen** en esta rama.
+**Importante:** esta entrega incorpora el backend ONNX, el catálogo, la descarga verificada y la apertura de sesiones. El preprocesamiento tensorial exacto, la ejecución de los tres modelos y la composición neuronal todavía deben integrarse y validarse con imágenes de prueba. La pantalla actual continúa usando el primer pipeline geométrico MediaPipe + OpenCV; no debe presentarse aún como intercambio neuronal terminado.
 
-Conserva los avisos de licencia y atribución de las dependencias al distribuir la aplicación. Verifica también las condiciones de redistribución del archivo de modelo concreto antes de empaquetarlo dentro del APK.
+Consulta [MODEL_LICENSES.md](MODEL_LICENSES.md) antes de descargar o usar esos pesos. La condición de uso privado no elimina automáticamente los términos de cada modelo. No se redistribuyen los pesos.
 
 ## Requisitos
 
@@ -29,12 +28,10 @@ Conserva los avisos de licencia y atribución de las dependencias al distribuir 
 
 ## Compilar
 
-Abrir el repositorio en Android Studio y ejecutar la sincronización Gradle. También se puede compilar con:
-
 ```bash
 ./gradlew assembleDebug
 ```
 
-## Uso responsable y privacidad
+## Privacidad y uso responsable
 
-Usa únicamente imágenes de personas que hayan dado su consentimiento. No crees contenido íntimo no consentido, suplantaciones ni material engañoso. El procesamiento de las fotografías es local; el modelo de puntos faciales se descarga una vez desde el alojamiento oficial de MediaPipe.
+Las fotos se procesan en el dispositivo y no se envían a un servidor. La primera descarga de modelos requiere conexión y espacio libre considerable. Usa únicamente imágenes de personas que hayan dado su consentimiento; no crees contenido íntimo no consentido ni material destinado a suplantar o engañar.
