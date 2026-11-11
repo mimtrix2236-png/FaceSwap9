@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -67,7 +68,7 @@ private fun FaceSwapApp() {
             ) {
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("◈", color = Color(0xFF8B7CFF), fontSize = 34.sp)
+                    androidx.compose.foundation.Image(\n                        painter = painterResource(id = R.drawable.faceswap_logo),\n                        contentDescription = "FaceSwap logo rojo neón",\n                        modifier = Modifier.height(48.dp)\n                    )
                     Column(Modifier.padding(start = 12.dp)) {
                         Text("FaceSwap", color = Color.White, fontSize = 28.sp)
                         Text("ANDROID STUDIO • BETA", color = Color(0xFF9AA4BF), fontSize = 11.sp)
