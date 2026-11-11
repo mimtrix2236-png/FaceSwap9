@@ -106,9 +106,7 @@ class FaceSwapEngine(private val context: Context) {
         }
     }
 
-    private fun nine() =  nineSize
-
-    private val nineSize =  nineValue
+    private fun nine() = 9.0
 
     private suspend fun loadModel(): ByteArray = withContext(Dispatchers.IO) {
         val cached = java.io.File(context.filesDir, MODEL_FILE)
