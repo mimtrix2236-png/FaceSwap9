@@ -64,10 +64,14 @@ class FaceSwapEngine(private val context: Context) {
             val targetFace = targetResult.faceLandmarks().firstOrNull()
                 ?: error("No se detectó un rostro en la foto de destino.")
 
+            val sourceRgba = Mat()
+            val targetRgba = Mat()
             val src = Mat()
             val dst = Mat()
-            Utils.bitmapToMat(source, src)
-            Utils.bitmapToMat(target, dst)
+            Utils.bitmapToMat(source, sourceRgba)
+            Utils.bitmapToMat(target, targetRgba)
+            Imgproc.cvtColor(sourceRgba, src, Imgproc.COLOR_RGBA2BGR)
+            Imgproc.cvtColor(targetRgba, dst, Imgproc.COLOR_RGBA2BGR)
 
             val from = MatOfPoint2f(*ANCHORS.map { i ->
                 Point(sourceFace[i].x().toDouble() * src.cols(), sourceFace[i].y().toDouble() * src.rows())
@@ -96,8 +100,11 @@ class FaceSwapEngine(private val context: Context) {
             )
             PhotoBridge.clone(warped, dst, mask, center, output)
 
+            val outputRgba = Mat()
+            Imgproc.cvtColor(output, outputRgba, Imgproc.COLOR_BGR2RGBA)
             val result = Bitmap.createBitmap(target.width, target.height, Bitmap.Config.ARGB_8888)
-            Utils.matToBitmap(output, result)
+            Utils.matToBitmap(outputRgba, result)
+            sourceRgba.release(); targetRgba.release(); outputRgba.release()
             src.release(); dst.release(); warped.release(); mask.release()
             oval.release(); from.release(); to.release(); transform.release(); output.release()
             result
