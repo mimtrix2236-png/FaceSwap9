@@ -68,7 +68,11 @@ private fun FaceSwapApp() {
             ) {
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.Image(\n                        painter = painterResource(id = R.drawable.faceswap_logo),\n                        contentDescription = "FaceSwap logo rojo neón",\n                        modifier = Modifier.height(48.dp)\n                    )
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(id = R.drawable.faceswap_logo),
+                        contentDescription = "FaceSwap logo rojo neón",
+                        modifier = Modifier.height(48.dp)
+                    )
                     Column(Modifier.padding(start = 12.dp)) {
                         Text("FaceSwap", color = Color.White, fontSize = 28.sp)
                         Text("ANDROID STUDIO • BETA", color = Color(0xFF9AA4BF), fontSize = 11.sp)
