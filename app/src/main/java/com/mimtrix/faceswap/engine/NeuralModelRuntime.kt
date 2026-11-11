@@ -6,11 +6,10 @@ import java.io.Closeable
 import java.io.File
 
 /**
- * Owns the ONNX sessions used by the neural swap pipeline.
- * Image tensor preparation and face compositing stay in the app's Kotlin code.
+ * Owns ONNX sessions used by the neural swap pipeline.
+ * Tensor preparation, face alignment and compositing remain app-owned Kotlin code.
  */
 class NeuralModelRuntime private constructor(
-    private val environment: OrtEnvironment,
     val swapper: OrtSession,
     val embeddingConverter: OrtSession,
     val faceRecognizer: OrtSession
@@ -34,18 +33,23 @@ class NeuralModelRuntime private constructor(
             }
 
             val environment = OrtEnvironment.getEnvironment()
-            val options = OrtSession.SessionOptions().apply {
-                setIntraOpNumThreads(2)
-                setInterOpNumThreads(1)
-            }
-            return try {
+            val options = OrtSession.SessionOptions()
+            options.setIntraOpNumThreads(2)
+            options.setInterOpNumThreads(1)
+            val opened = mutableListOf<OrtSession>()
+            try {
                 val swapper = environment.createSession(models.getValue(required[0]).absolutePath, options)
+                    .also(opened::add)
                 val converter = environment.createSession(models.getValue(required[1]).absolutePath, options)
+                    .also(opened::add)
                 val recognizer = environment.createSession(models.getValue(required[2]).absolutePath, options)
-                NeuralModelRuntime(environment, swapper, converter, recognizer)
+                    .also(opened::add)
+                return NeuralModelRuntime(swapper, converter, recognizer)
             } catch (error: Exception) {
-                options.close()
+                opened.asReversed().forEach { runCatching { it.close() } }
                 throw error
+            } finally {
+                options.close()
             }
         }
     }
