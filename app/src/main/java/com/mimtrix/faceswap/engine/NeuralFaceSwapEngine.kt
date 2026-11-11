@@ -119,7 +119,7 @@ class NeuralFaceSwapEngine(private val context: Context) {
                         ?: error("CrossFace no declara una entrada.")
                     runVector(session, env, inputName, identity, longArrayOf(1, 512))
                 }
-                val ghostInput = imageTensor(target256, FACE_SIZE, normalizeArcFace = false)
+                val ghostInput = imageTensor(target256, FACE_SIZE)
                 val generated = withSession(ghostFile) { session ->
                     val requiredInputs = setOf("source", "target")
                     check(session.inputNames.containsAll(requiredInputs)) {
